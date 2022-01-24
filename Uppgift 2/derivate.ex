@@ -57,7 +57,7 @@ defmodule Derivates do
         :ok
     end
 
-        def test5() do
+    def test5() do
         e = {:exp, {:var, :x}, {:num, 1/2}}
         d = deriv(e, :x)
         c = calc(d, :x, 4)
@@ -66,6 +66,16 @@ defmodule Derivates do
         IO.write("derivate: #{pprint(d)}\n")
         IO.write("simplified: #{pprint(simplify(d))}\n")
         IO.write("calculated: #{pprint(simplify(c))}\n")
+        :ok
+    end
+
+    def test6() do
+        e = {:sin, {:var, :x}}
+        d = deriv(e, :x)
+
+        IO.write("expression: #{pprint(e)}\n")
+        IO.write("derivate: #{pprint(d)}\n")
+        IO.write("simplified: #{pprint(simplify(d))}\n")
         :ok
     end
 
@@ -79,6 +89,8 @@ defmodule Derivates do
     | {:add, expr(), expr()}
     | {:exp, expr(), literal()}
     | {:ln, expr()}
+    | {:sin, expr()}
+    | {:cos, expr()}
 
 
     def deriv({:num, _}, _) do {:num,0} end
@@ -112,6 +124,9 @@ defmodule Derivates do
     def deriv({:ln, e}, v) do
         {:div, deriv(e, v), e}  
     end
+    def deriv({:sin, e}, v) do
+        {:mul, deriv(e,v), {:cos,e}}
+    end
 
 
 
@@ -120,9 +135,6 @@ defmodule Derivates do
     def calc({:var, v}, _, _) do {:var, v} end
     def calc({:add, e1, e2}, v, n) do 
         {:add, calc(e1, v, n), calc(e2, v, n)} 
-    end
-    def calc({:sub, e1, e2}, v, n) do
-        {:sub, calc(e1, v, n), calc(e2, v, n)}
     end
     def calc({:mul, e1, e2}, v, n) do 
         {:mul, calc(e1, v, n), calc(e2, v, n)} 
@@ -147,6 +159,9 @@ defmodule Derivates do
     end
     def simplify({:div, e1, e2}) do 
         simplify_div(simplify(e1), simplify(e2))
+    end
+    def simplify({:cos, e}) do 
+        simplify_cos(simplify(e))
     end
     def simplify(e) do e end
 
@@ -173,6 +188,10 @@ defmodule Derivates do
     def simplify_exp(e1, e2) do {:exp, e1, e2} end
 
 
+    def simplify_cos({:num, n}) do {:num, :math.cos(n)} end
+    def simplify_cos(e1) do {:cos, e1} end
+
+
 
     def pprint({:num,n}) do "#{n}" end
     def pprint({:var,v}) do "#{v}" end
@@ -181,6 +200,8 @@ defmodule Derivates do
     def pprint({:exp,e1,e2}) do "((#{pprint(e1)}) ^ (#{pprint(e2)}))" end
     def pprint({:div, e1, e2}) do "(#{pprint(e1)}) / (#{pprint(e2)})" end
     def pprint({:ln, e}) do "ln (#{pprint(e)})" end
+    def pprint({:sin, e}) do "sin(#{pprint(e)})" end
+    def pprint({:cos, e}) do "cos(#{pprint(e)})" end
 
 
 end
