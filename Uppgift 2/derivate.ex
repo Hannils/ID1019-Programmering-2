@@ -96,7 +96,7 @@ defmodule Derivates do
     def deriv({:num, _}, _) do {:num,0} end
     def deriv({:var, v}, v) do {:num,1} end
     def deriv({:var, _}, _) do {:num,0} end
-    def deriv({:mul, e1, e2}, v) do
+    def deriv({:mul, e1, e2}, v) do 
         {:add,
         {:mul, deriv(e1,v), e2},
         {:mul, e1, deriv(e2,v)}}
