@@ -40,8 +40,7 @@ defmodule Register do
     end
 
     def write(registry, register, value) do
-        List.delete_at(registry, register)
-        List.insert_at(registry, register, value)
+        List.replace_at(registry, register, value)
     end
 end
 
@@ -54,6 +53,16 @@ defmodule Program do
     def load({:prgm, code, data}) do
         {code, data}
     end
+
+    def read_word({:data, data}, i) do
+        0 = rem(i,4)    ## addr must be amultiple of 4
+        Map.get(data, i)
+    end
+
+    def write_word({:data, data}, i, val) do
+        0 = rem(i, 4)   ## addr must be amultiple of 4
+        {:data, Map.put(data, i, val)}
+    end 
 
 end
 
@@ -69,7 +78,7 @@ defmodule Out do
     end
 
     def close(out) do
-        IO.inspect(out)
+      Enum.reverse(out)
     end
 end
 
@@ -88,45 +97,69 @@ defmodule Emulator do
 
     def run(pc, code, reg, mem, out) do
         next = Program.read_instruction(code, pc)
+        IO.inspect next, label: "This is next at pc: #{pc}: "
         case next do
             :halt ->
+            IO.inspect reg, label: "This is reg\n"
             Out.close(out)
             
             {:add, rd, rs, rt} ->
-                pc = pc + 4
                 s = Register.read(reg, rs)
                 t = Register.read(reg, rt)
                 reg = Register.write(reg, rd, s + t) # well, almost
-                run(pc, code, reg, mem, out)
+                run(pc+4, code, reg, mem, out)
             
             {:addi, rd, rs, im} ->
-                pc = pc + 4
                 s = Register.read(reg, rs)
                 reg = Register.write(reg, rd, s + im)
-                run(pc, code, reg, mem, out)
+                IO.inspect reg, label: "This is reg "
+                run(pc+4, code, reg, mem, out)
+
+            {:label, name} ->
+                mem = [{name, pc} | mem]
+                IO.inspect mem, label: "This is mem "
+                run(pc+4, code, reg, mem, out)
+
 
             {:sub, rd, rs, rt} ->
-                pc = pc + 4
                 s = Register.read(reg, rs)
                 t = Register.read(reg, rt)
                 reg = Register.write(reg, rd, s - t)
-                run(pc, code, reg, mem, out)
+                #IO.write("$#{rd} = $#{rs}: #{s} - $#{rt}: #{t} = #{s-t}\n")
+                run(pc+4, code, reg, mem, out)
+
+            {:beq, rs, rt, label} ->
+                labelPC = Keyword.fetch!(mem, label)
+                a = Register.read(reg, rs)
+                b = Register.read(reg, rt)
+                pc = if a == b do  labelPC else pc end
+                run(pc+4, code, reg, mem, out)
 
             {:bne, rs, rt, label} ->
-                s = Register.read(reg, rs)
-                t = Register.read(reg, rt)
-                if (s != t) do
-                    pc = pc + 4 + 
-                end
+                labelPC = Keyword.fetch!(mem, label)
+                a = Register.read(reg, rs)
+                b = Register.read(reg, rt)
+                pc = if a != b do labelPC else pc end
+                run(pc+4, code, reg, mem, out)
 
-            {:label, pc, }
+            {:lw, rd, rs, imm} ->
+	            val = Keyword.fetch!(mem, imm)
+	            reg = Register.write(reg, rd, val)
+                IO.inspect reg, label: "This is reg "
+	            run(pc+4, code, reg, mem, out)
+
+            {:sw, rs, rt, imm} ->
+                s = Register.read(reg, rs) 
+                IO.write("Finns på $#{rs}: #{s}")
+                mem = [{imm, s} | mem]
+                IO.inspect mem, label: "This is mem "
+                run(pc+4, code, reg, mem, out)
+
 
             {:out, rs} ->
-                pc = pc + 4
                 s = Register.read(reg, rs)
                 out = Out.put(out, s)
-                IO.inspect reg, label: "This is reg"
-                run(pc, code, reg, mem, out)
+                run(pc+4, code, reg, mem, out)
         end
     end
 end
@@ -137,17 +170,28 @@ defmodule Test do
 
     def test1() do
 
-        data = []
+        #[ {:label, :arg}, {:word, 12} ]
+        data = Keyword.new()
+        #code = [{:addi, 1, 0, 2}, # $1 <- 5
+        #        {:add, 4, 2, 1}, # $4 <- $2 + $1
+        #        {:addi, 5, 0, 1}, # $5 <- 1
+        #        {:label, :loop},
+        #        {:sub, 4, 4, 5}, # $4 <- $4 - $5
+        #        {:out, 4}, # out $4
+        #        {:bne, 4, 0, :loop}, # branch if not equal
+        #        :halt]
 
-        code = [{:addi, 1, 0, 5},
-        ##{:lw, 2, 0, :arg},
-        {:add, 4, 2, 1},
-        #{:addi, 5, 0, 1},
-        #{:label, :loop},
-        #{:sub, 4, 4, 5},
-        {:out, 4},
-        ##{:bne, 4, 0, :loop},
-        :halt]
+           code = [
+                {:addi, 1, 0, 1},
+                {:addi, 10, 0, 10},
+                {:addi, 9, 0, 9},
+                {:addi, 2, 0, 5},
+                {:sw, 10, 0, :arg},
+                {:lw, 2, 0, :arg},
+                {:label, :loop}, 
+                {:sub, 2, 2, 1}, 
+                {:bne, 1, 2, :loop}, 
+                :halt]
 
         Emulator.run({:prgm, code, data})
      end
