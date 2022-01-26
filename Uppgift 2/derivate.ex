@@ -14,9 +14,7 @@ defmodule Derivates do
     end
 
     def test2() do
-        e = {:add, 
-            {:exp, {:var, :x}, {:num, 3}},
-            {:num, 4}}
+        e = {:exp, {:mul, {:var, :x}, {:num, 4}}, {:num, 3}}
         d = deriv(e, :x)
         c = calc(d, :x, 4)
 
