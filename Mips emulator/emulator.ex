@@ -112,12 +112,10 @@ defmodule Emulator do
             {:addi, rd, rs, im} ->
                 s = Register.read(reg, rs)
                 reg = Register.write(reg, rd, s + im)
-                IO.inspect reg, label: "This is reg "
                 run(pc+4, code, reg, mem, out)
 
             {:label, name} ->
                 mem = [{name, pc} | mem]
-                IO.inspect mem, label: "This is mem "
                 run(pc+4, code, reg, mem, out)
 
 
@@ -125,7 +123,6 @@ defmodule Emulator do
                 s = Register.read(reg, rs)
                 t = Register.read(reg, rt)
                 reg = Register.write(reg, rd, s - t)
-                #IO.write("$#{rd} = $#{rs}: #{s} - $#{rt}: #{t} = #{s-t}\n")
                 run(pc+4, code, reg, mem, out)
 
             {:beq, rs, rt, label} ->
@@ -190,6 +187,7 @@ defmodule Test do
                 {:lw, 2, 0, :arg},
                 {:label, :loop}, 
                 {:sub, 2, 2, 1}, 
+                {:out, 2},
                 {:bne, 1, 2, :loop}, 
                 :halt]
 
