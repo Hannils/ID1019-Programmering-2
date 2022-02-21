@@ -1,9 +1,5 @@
 defmodule Primes do
-  #Goal: Enum.take( Stream.map(Primes.primes(), fn(x) -> 2*x end), 5)
-  #[4, 6, 10, 14, 22]
-  #Take out 5 primes and for each prime map it to 2x its value
-
-
+  defstruct [:next]
 
   def z(n) do
     fn() -> {n, z(n+1)} end
@@ -18,40 +14,35 @@ defmodule Primes do
     end
   end
 
-  def sieve(n, p) do
+  def sieve(op, p) do
+    {n, op} = filter(op, p)
+    {n, fn() -> sieve(op, n) end}
+  end
 
+  def primes() do
+    %Primes{next: fn () ->  {2, fn () -> sieve(z(3), 2)  end} end}
   end
 
 
-
-  def foldl([], acc, op) do acc end
-  def foldl([h|t], acc, op) do
-    foldl(t, op.(h, acc), op)
-  end
-  def foo(x) do
-    y = 3
-    fn (v) -> v + y + x end
-  end
-
-  def infinity() do
-    fn () -> infinity(0) end
-  end
-
-  def infinity(n) do
-    [n|fn() -> infinity(n+1) end]
+  defimpl Enumerable do
+    def count(_) do {:error, __MODULE__} end
+    def member?(_, _) do {:error, __MODULE__} end
+    def slice(_) do {:error, __MODULE__} end
+    def reduce(_, {:halt, acc}, _fun) do
+      {:halted, acc}
+    end
+    def reduce(primes, {:suspend, acc}, fun) do
+      {:suspended, acc, fn(cmd) -> reduce(primes, cmd, fun) end}
+    end
+    def reduce(primes, {:cont, acc}, fun) do
+      {p, next} = Primes.next(primes)
+      reduce(next, fun.(p,acc), fun)
+    end
   end
 
-  def fib do
-    fn() -> fib(1,1) end
-  end
-
-  def fib(f1, f2) do
-    [f1|fn() -> fib(f2, f1+f2) end]
-  end
-
-  def sumr({:range, from, from}) do from end
-  def sumr({:range, from, to}) do
-    from + sumr({:range, from+1, to})
+  def next(%Primes{next: n}) do
+    {p, n} = n.()
+    {p, %Primes{next: n}}
   end
 
 end
